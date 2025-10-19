@@ -21,13 +21,13 @@ class RiverRushUI(QtWidgets.QDialog):
         self.boat_x = self.boat_x_start
         self.boat_y = self.boat_y_start
 
-		# ตั้งค่าเของสุ่ม
+        # ตั้งค่าเของสุ่ม
         self.obstacles = []  
-        self.obstacle_speed = 7
+        self.obstacle_speed = 3
 
         # --- ตั้งค่า Path รูปภาพ (สำคัญมาก!) ---
-        # แก้ไข Path ตรงนี้ให้ตรงกับตำแหน่งโฟลเดอร์ images ของคุณ
-        self.IMAGE_DIR = "C:/Users/ICT68/Documents/maya/2025/scripts/RiverRush/images"
+        # <--- 1. แก้ไข Path ให้ตรงกับโฟลเดอร์ที่เปลี่ยนชื่อ
+        self.IMAGE_DIR = "C:/Users/nadia/Documents/maya/2026/scripts/RiverRush/images"
 
         # ตั้งค่า Timers 
         self.game_timer = QtCore.QTimer(self)
@@ -132,8 +132,15 @@ class RiverRushUI(QtWidgets.QDialog):
 
         # เรือ
         self.boat = QtWidgets.QLabel(self.game_area)
-        self.boat.setPixmap(QtGui.QPixmap("C:/Users/nadia/Documents/maya/2026/scripts/RiverRush/images/ship.PNG").scaled(100, 100, QtCore.Qt.KeepAspectRatio))
+        self.boat.setFocusPolicy(QtCore.Qt.NoFocus)
+        
+        # <--- 2. แก้ไข Path ของเรือที่ผิด ให้มาใช้ self.IMAGE_DIR
+        # (คุณอาจจะต้องเช็คว่าไฟล์ชื่อ ship.PNG หรือ ship.png)
+        ship_image_path = os.path.join(self.IMAGE_DIR, "ship.PNG") 
+        self.boat.setPixmap(QtGui.QPixmap(ship_image_path).scaled(100, 100, QtCore.Qt.KeepAspectRatio))
         self.boat.setGeometry(self.boat_x, self.boat_y, 100, 100)
+
+        self.boat.setStyleSheet("outline: none; border: none;")
 
 
         return widget
@@ -170,13 +177,86 @@ class RiverRushUI(QtWidgets.QDialog):
         self.boat.move(self.boat_x, self.boat_y)
 
         # รีเซ็ตคะแนนและพลังชีวิต
-        self.score_label.setText("คะแนน: 0")
-        self.heart_label.setText("❤️: 3")
+        self.score = 0  # <--- เพิ่มบรรทัดนี้ (สำหรับนับคะแนนที่เป็นตัวเลข)
+        self.lives = 3
+        self.obstacle_speed = 10 # <--- เพิ่มบรรทัดนี้ (รีเซ็ตความเร็วกลับไปที่ 10)
 
+        # รีเซ็ตคะแนนและพลังชีวิต
+        self.score_label.setText(f"คะแนน: {self.score}")
+        self.heart_label.setText(f"❤️: {self.lives}")
+
+#--------------------------------------------------------------
+
+    def update_game(self):
+        # วนลูปเช็กสิ่งกีดขวางแต่ละอัน
+        for obs in self.obstacles[:]:
+            # 1. ขยับสิ่งกีดขวางลงมา
+            obs.move(obs.x(), obs.y() + self.obstacle_speed)
+
+            # 2. ตรวจสอบว่าสิ่งกีดขวางตกพ้นจอหรือยัง (เพื่อนับคะแนน)
+            if obs.y() > self.game_area.height():
+                self.obstacles.remove(obs)
+                obs.deleteLater()
+                
+                # 2.1 เพิ่มคะแนน
+                self.score += 1
+                
+                # 2.2 อัปเดตป้ายคะแนน
+                self.score_label.setText(f"คะแนน: {self.score}")
+                
+                # 2.3 เพิ่มความเร็ว (เมื่อคะแนนถึง 5, 10, 15, ...)
+                if self.score > 0 and self.score % 5 == 0:
+                    self.obstacle_speed += 2  
+                    print(f"เลเวลอัป! คะแนน: {self.score}, ความเร็วใหม่: {self.obstacle_speed}")
+                
+            # 3. ตรวจสอบว่าเรือชนสิ่งกีดขวางหรือไม่
+            if self.boat.geometry().intersects(obs.geometry()):
+                
+                # 3.1 ลบสิ่งกีดขวางที่ชนออกทันที
+                self.obstacles.remove(obs)
+                obs.deleteLater()
+                
+                # 3.2 ลดพลังชีวิต
+                self.lives -= 1
+                
+                # 3.3 อัปเดตป้ายหัวใจ
+                self.heart_label.setText(f"❤️: {self.lives}")
+                
+                # 4. (สำคัญที่สุด) ตรวจสอบว่าแพ้หรือยัง
+                if self.lives <= 0:
+                    self.game_over() # เรียก Game Over *ต่อเมื่อ* หัวใจหมด
+                    return # หยุดการทำงานทันที
+                # --- จบส่วนที่เพิ่มเข้ามา ---
+
+            # --- นี่คือส่วนที่แก้ไขเรื่องการชน ---
+            if self.boat.geometry().intersects(obs.geometry()):
+                
+                # 1. ลบสิ่งกีดขวางที่ชนออกทันที
+                self.obstacles.remove(obs)
+                obs.deleteLater()
+                
+                # 2. ลดพลังชีวิต
+                self.lives -= 1
+                
+                # 3. อัปเดตป้ายหัวใจ
+                self.heart_label.setText(f"❤️: {self.lives}")
+                
+                # 4. ตรวจสอบว่าแพ้หรือยัง
+                if self.lives <= 0:
+                    self.game_over()
+                    return # หยุดการทำงานทันที
+                
+                # ถ้าพลังชีวิตยังไม่หมด เกมก็จะเล่นต่อไปตามปกติ
+
+            if self.boat.geometry().intersects(obs.geometry()):
+                self.game_over()
+                return
+#--------------------------------------------------------------
 
     def spawn_obstacle(self):
         """สุ่มสร้างท่อนไม้หรือหิน"""
         obstacle = QtWidgets.QLabel(self.game_area)
+        obstacle.setFocusPolicy(QtCore.Qt.NoFocus)
         x = random.randint(0, self.game_area.width() - 80)
 
         # สุ่มว่าจะสร้างอะไร
@@ -186,22 +266,13 @@ class RiverRushUI(QtWidgets.QDialog):
             image_path = os.path.join(self.IMAGE_DIR, "rock01.PNG")
 
         obstacle.setPixmap(QtGui.QPixmap(image_path).scaled(80, 80, QtCore.Qt.KeepAspectRatio))
-        obstacle.setGeometry(x, -80, 80, 80) # เริ่มจากข้างบนนอกจอ
+        obstacle.setGeometry(x, -80, 80, 70) # เริ่มจากข้างบนนอกจอ
+
+        obstacle.setStyleSheet("outline: none; border: none;")
+
         obstacle.show()
         self.obstacles.append(obstacle)
 
-        #ตำแหน่งของสิ่งกีดขวางและตรวจสอบการชน
-    def update_game(self):
-        for obs in self.obstacles[:]:
-            obs.move(obs.x(), obs.y() + self.obstacle_speed)
-
-            if obs.y() > self.game_area.height():
-                self.obstacles.remove(obs)
-                obs.deleteLater()
-
-            if self.boat.geometry().intersects(obs.geometry()):
-                self.game_over()
-                return
         #จบเกม
     def game_over(self):
         self.game_timer.stop()
@@ -209,12 +280,13 @@ class RiverRushUI(QtWidgets.QDialog):
 
         msg = QtWidgets.QMessageBox(self)
         msg.setWindowTitle("💀เรือชน💀")
-        msg.setText(" จบเกมจ้า!")
+        msg.setText(" แพ้แง้วคับ!")
         msg.exec_()
         
         # กลับไปที่หน้าเมนูเริ่มต้น
         self.stacked_layout.setCurrentWidget(self.menu_widget)
 
+#--------------------------------------------------------------
 
     def keyPressEvent(self, event):
         if not self.game_timer.isActive():
