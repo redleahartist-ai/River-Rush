@@ -4,78 +4,65 @@ import maya.OpenMayaUI as omui
 import random
 import os
 
-# 1.ฟังก์ชันเชื่อมต่อกับ MAYA
 def maya_main_window():
     main_window_ptr = omui.MQtUtil.mainWindow()
     return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
 
-# 2.ห้อง UI หลัก
 class project_ui(QtWidgets.QDialog):
     
     def __init__(self, parent=maya_main_window()):
         super().__init__(parent)
 
-        # ตั้งค่าเรือ
         self.boat_speed = 20
         self.boat_x_start = 300
         self.boat_y_start = 600
         self.boat_x = self.boat_x_start
         self.boat_y = self.boat_y_start
 
-        # ตั้งค่าเของสุ่ม
         self.obstacles = []  
         self.obstacle_speed = 3
 
         self.high_score = 0
-        # ตั้งค่า Path รูปภาพ (สำคัญ) 
         self.IMAGE_DIR = "C:/Users/nadia/Documents/maya/2026/scripts/661310088_project/images"
 
-        # ตั้งค่า Timers 
         self.game_timer = QtCore.QTimer(self)
         self.game_timer.timeout.connect(self.update_game)
 
         self.spawn_timer = QtCore.QTimer(self)
         self.spawn_timer.timeout.connect(self.spawn_obstacle)
 
-        # สร้าง UI ทั้งหน้าเมนูและหน้าเกม
         self.setup_ui()
 
     def setup_ui(self):
+        icon_path = os.path.join(self.IMAGE_DIR, "C:/Users/nadia/Documents/maya/2026/scripts/661310088_project/icons", "icons1.PNG")
+        self.setWindowIcon(QtGui.QIcon(icon_path))
+        
         self.setWindowTitle("RIVER RUSH GAME!!!!")
         self.setFixedSize(700, 800)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
-        # สร้าง Layout หลักแบบสลับหน้า 
         self.stacked_layout = QtWidgets.QStackedLayout(self)
         self.setLayout(self.stacked_layout) 
 
-        # สร้างหน้าเมนู (หน้าที่ 1) 
         self.menu_widget = self._create_menu_widget()
         self.stacked_layout.addWidget(self.menu_widget)
 
-        # สร้างหน้าเกม (หน้าที่ 2) 
         self.game_widget = self._create_game_widget()
         self.stacked_layout.addWidget(self.game_widget)
         
-        # สร้างหน้า Game Over (หน้าที่ 3)
         self.game_over_widget = self._create_game_over_widget()
         self.stacked_layout.addWidget(self.game_over_widget)
 
-        # เริ่มต้นโดยการแสดงหน้าเมนู
         self.stacked_layout.setCurrentWidget(self.menu_widget)
 
-    #--------------------------------------------------------------
-
     def _create_menu_widget(self):
-        #สร้าง Widget สำหรับหน้าเมนู
         widget = QtWidgets.QWidget()
-        widget.setStyleSheet("background-color: #90d7ec;") #สีพื้นหลังหน้าเมนู
+        widget.setStyleSheet("background-color: #88daf2;") 
 
         layout = QtWidgets.QVBoxLayout(widget)
         layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter) 
         layout.setContentsMargins(0, 0, 0, 20) 
 
-        # ส่วนรูปภาพ Banner (หน้านี้ยังแสดงเหมือนเดิม) ---
         image_label = QtWidgets.QLabel()
         
         image_path = os.path.join(self.IMAGE_DIR, "BG1.PNG") 
@@ -85,10 +72,9 @@ class project_ui(QtWidgets.QDialog):
             scaled_pixmap = pixmap.scaledToWidth(self.width(), QtCore.Qt.SmoothTransformation)
             image_label.setPixmap(scaled_pixmap)
 
-        image_label.setStyleSheet("margin-bottom: 9.5px;") 
+        image_label.setStyleSheet("margin-bottom: 3px;") 
         layout.addWidget(image_label)
         
-        # สร้างปุ่มสำหรับเริ่มเกม,ออก 
         start_button = QtWidgets.QPushButton("เริ่มเกม")
         quit_button = QtWidgets.QPushButton("ออก")
 
@@ -134,18 +120,14 @@ class project_ui(QtWidgets.QDialog):
 
         return widget
 
-    #--------------------------------------------------------------
-
     def _create_game_widget(self):
-        #สร้าง Widget สำหรับหน้าเกม
         widget = QtWidgets.QWidget()
-        widget.setStyleSheet("background-color: #C2E2F2;") # สีพื้นหลัง (ตามที่คุณพอใจ)
+        widget.setStyleSheet("background-color: #C2E2F2;") 
         
         layout = QtWidgets.QVBoxLayout(widget)
         layout.setContentsMargins(0,0,0,0)
         layout.setSpacing(0)
 
-        # คะแนนและหัวใจซ้ายขวา
         info_layout = QtWidgets.QHBoxLayout()
         info_layout.setContentsMargins(10, 10, 10, 10)
         self.heart_label = QtWidgets.QLabel("❤️: 3")
@@ -174,13 +156,11 @@ class project_ui(QtWidgets.QDialog):
         info_layout.addWidget(self.score_label)
         layout.addLayout(info_layout)
 
-        # พื้นน้ำ
         self.game_area = QtWidgets.QLabel()
         self.game_area.setFixedSize(700, 700)
         self.game_area.setStyleSheet("background-color: #7cc8ff; border: 2px solid #7cc8ff;")
         layout.addWidget(self.game_area)
 
-        # เรือ
         self.boat = QtWidgets.QLabel(self.game_area)
         self.boat.setFocusPolicy(QtCore.Qt.NoFocus)
         
@@ -192,31 +172,25 @@ class project_ui(QtWidgets.QDialog):
 
         return widget
 
-    #--------------------------------------------------------------
     
     def _create_game_over_widget(self):
-        #(ใหม่) สร้าง Widget สำหรับหน้า Game Over
         widget = QtWidgets.QWidget()
-        # สีพื้นหลังเป็นสีดำ
         widget.setStyleSheet("background-color: #C2E2F2;") 
 
         layout = QtWidgets.QVBoxLayout(widget)
-        layout.setAlignment(QtCore.Qt.AlignCenter) # จัดทุกอย่างกลางหน้า
+        layout.setAlignment(QtCore.Qt.AlignCenter) 
         layout.setContentsMargins(50, 50, 50, 50) 
 
-        # ข้อความ แพ้แล้ว!
         game_over_label = QtWidgets.QLabel("แพ้แล้ว!")
         game_over_label.setAlignment(QtCore.Qt.AlignCenter)
         game_over_label.setStyleSheet("color: #D9534F; font-size: 60px; font-weight: bold; margin-bottom: 20px;")
         layout.addWidget(game_over_label)
         
-        # คะแนน 
         self.final_score_label = QtWidgets.QLabel("คะแนนของคุณ: 0")
         self.final_score_label.setAlignment(QtCore.Qt.AlignCenter)
         self.final_score_label.setStyleSheet("color: #0073e6; font-size: 40px; font-weight: bold; margin-top: 30px;")
         layout.addWidget(self.final_score_label)
 
-        # ปุ่มเล่นใหม่กับกลับเมนูหลัก 
         restart_button = QtWidgets.QPushButton("🔥เล่นอีกครั้ง🔥")
         back_to_menu_button = QtWidgets.QPushButton("กลับเมนูหลัก")
 
@@ -260,10 +234,7 @@ class project_ui(QtWidgets.QDialog):
 
         return widget
 
-    #--------------------------------------------------------------
-
     def start_game(self):
-        #รีเซ็ตและเริ่มเกม
         self.reset_game_state()
         self.stacked_layout.setCurrentWidget(self.game_widget)
         self.setFocus() 
@@ -271,7 +242,6 @@ class project_ui(QtWidgets.QDialog):
         self.spawn_timer.start(1000) 
 
     def reset_game_state(self):
-        #างค่าและวัตถุในเกมเพื่อเริ่มใหม่
         self.game_timer.stop()
         self.spawn_timer.stop()
 
@@ -290,9 +260,6 @@ class project_ui(QtWidgets.QDialog):
         self.score_label.setText(f"คะแนน: {self.score}")
         self.heart_label.setText(f"❤️: {self.lives}")
 
-    #--------------------------------------------------------------
-
-    # อัปเดตคะแนนตอนเล่น บอกความเร็วที่เพิ่มขึ้นทีละ 5
     def update_game(self):
         for obs in self.obstacles[:]:
             obs.move(obs.x(), obs.y() + self.obstacle_speed)
@@ -306,7 +273,7 @@ class project_ui(QtWidgets.QDialog):
                 
                 if self.score > 0 and self.score % 5 == 0:
                     self.obstacle_speed += 2  
-                    print(f"เลเวลอัป!เพิ่มความเร็วแล้วนะ!! คะแนน: {self.score}, ความเร็วใหม่: {self.obstacle_speed}")
+                    print(f"เลเวลอัป!เพิ่มความเร็วแล้วนะ!! คะแนน: {self.score}, ความเร็วเพิ่มขึ้น: {self.obstacle_speed}")
                 
             if self.boat.geometry().intersects(obs.geometry()):
                 self.obstacles.remove(obs)
@@ -319,9 +286,6 @@ class project_ui(QtWidgets.QDialog):
                     self.game_over() 
                     return 
 
-    #--------------------------------------------------------------
-
-        # สุ่มสร้างท่อนไม้หรือหิน
     def spawn_obstacle(self):
         obstacle = QtWidgets.QLabel(self.game_area)
         obstacle.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -340,7 +304,6 @@ class project_ui(QtWidgets.QDialog):
         obstacle.show()
         self.obstacles.append(obstacle)
 
-        # แสดงหน้า Game Over ที่สร้างใหม่
     def game_over(self):
         self.game_timer.stop()
         self.spawn_timer.stop()
@@ -349,16 +312,12 @@ class project_ui(QtWidgets.QDialog):
             self.high_score = self.score
             self.high_score_label.setText(f"คะแนนสูงสุด: {self.high_score}")      
         
-        # อัปเดตคะแนนสุดท้ายบนหน้า Game Over
         self.final_score_label.setText(f"คะแนนของคุณ: {self.score}")
         self.stacked_layout.setCurrentWidget(self.game_over_widget) 
 
     def back_to_menu(self):
-        # ฟังก์ชันสำหรับกลับไปหน้าเมนูหลัก
         self.stacked_layout.setCurrentWidget(self.menu_widget)
-        self.setFocus() # สำคัญเพื่อให้รับการกดปุ่มบนหน้าเมนูได้
-
-    #--------------------------------------------------------------
+        self.setFocus() 
 
     def keyPressEvent(self, event):
         if not self.game_timer.isActive():
